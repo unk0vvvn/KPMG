@@ -1,0 +1,468 @@
+<!--
+AI 통제 운영평가 시스템
+단일 HTML/CSS/JavaScript 구현
+대표 통제: 고액 비용 사전 승인
+-->
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AI 통제 운영평가 시스템</title>
+  <style>
+    :root{
+      --navy-900:#14213d;--navy-700:#1f3a5f;--navy-600:#2f5278;--blue-50:#f3f7fb;
+      --gray-25:#fafbfc;--gray-50:#f6f7f9;--gray-100:#eceff3;--gray-200:#d9dee6;
+      --gray-400:#8993a4;--gray-600:#536071;--gray-800:#263142;--green-700:#237a4b;
+      --green-50:#edf8f2;--red-700:#b42318;--red-50:#fff1f0;--amber-700:#a15c00;
+      --amber-50:#fff8e8;--purple-700:#6941c6;--purple-50:#f5f3ff;--sidebar:220px;
+    }
+    *{box-sizing:border-box}
+    html,body{margin:0;height:100%;font-family:"Malgun Gothic","Apple SD Gothic Neo",Arial,sans-serif;color:var(--gray-800);background:var(--gray-50);font-size:13px}
+    button,input,select,textarea{font:inherit}
+    button{cursor:pointer}
+    button:disabled{cursor:not-allowed;opacity:.48}
+    :focus-visible{outline:3px solid rgba(47,82,120,.28);outline-offset:2px}
+    .app{min-height:100vh;display:grid;grid-template-columns:var(--sidebar) minmax(0,1fr)}
+    .sidebar{position:fixed;inset:0 auto 0 0;width:var(--sidebar);background:var(--navy-900);color:#fff;display:flex;flex-direction:column;z-index:20}
+    .brand{height:112px;padding:24px 20px 18px;border-bottom:1px solid rgba(255,255,255,.12)}
+    .brand strong{display:block;font-size:17px;letter-spacing:-.3px;line-height:1.4}.brand small{display:block;color:#b7c1d1;margin-top:6px;font-size:11px}
+    .company{padding:14px 20px;color:#d8dfeb;font-size:11px;border-bottom:1px solid rgba(255,255,255,.08)}
+    .nav{padding:12px 10px;display:grid;gap:3px}
+    .nav-btn{width:100%;height:42px;border:0;background:transparent;color:#cbd4e1;text-align:left;padding:0 13px;display:flex;align-items:center;gap:11px;border-radius:4px}
+    .nav-btn:hover{background:rgba(255,255,255,.07);color:#fff}.nav-btn.active{background:#fff;color:var(--navy-900);font-weight:700}
+    .nav-icon{width:19px;text-align:center;font-size:15px}
+    .sidebar-user{margin-top:auto;padding:18px 16px;border-top:1px solid rgba(255,255,255,.12)}
+    .user-row{display:flex;align-items:center;gap:10px}.avatar{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;background:#dbe6f1;color:var(--navy-700);font-weight:700}
+    .sidebar-user b{display:block;font-size:12px}.sidebar-user small{color:#aeb9ca}.logout{border:0;background:transparent;color:#cbd4e1;padding:11px 0 0;font-size:11px}
+    .main{grid-column:2;min-width:0}
+    .topbar{height:104px;background:#fff;border-bottom:1px solid var(--gray-200);padding:0 24px;position:sticky;top:0;z-index:15}
+    .header-main{height:66px;display:flex;align-items:center;justify-content:space-between}
+    .header-title h1{font-size:18px;margin:0 0 5px;letter-spacing:-.3px}.header-title p{margin:0;color:var(--gray-600);font-size:12px}
+    .header-tools{display:flex;align-items:center;gap:8px}.icon-btn{width:34px;height:34px;border:1px solid var(--gray-200);background:#fff;border-radius:4px;color:var(--gray-600)}
+    .date-status{border-left:1px solid var(--gray-200);margin-left:6px;padding-left:14px;color:var(--gray-600);font-size:11px;line-height:1.6}.live-dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--green-700);margin-right:5px}
+    .crumb{height:38px;border-top:1px solid var(--gray-100);display:flex;align-items:center;color:var(--gray-600);font-size:11px}
+    .content{padding:16px 18px 28px}
+    .summary{background:#fff;border:1px solid var(--gray-200);display:grid;grid-template-columns:minmax(520px,1.15fr) minmax(460px,1fr) auto;margin-bottom:14px;min-height:116px}
+    .control-info{padding:15px 18px;display:grid;grid-template-columns:repeat(4,minmax(105px,1fr));gap:13px 22px;border-right:1px solid var(--gray-100)}
+    .info-item span,.metric span{display:block;color:var(--gray-600);font-size:10px;margin-bottom:5px}.info-item b{font-size:12px}
+    .status-text{color:var(--navy-600)}.summary-progress{padding:15px 18px;border-right:1px solid var(--gray-100)}
+    .progress-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}.progress-head b{font-size:12px}.progress-head strong{color:var(--navy-700)}
+    .progress{height:7px;background:var(--gray-100);overflow:hidden;margin-bottom:12px}.progress>i{display:block;height:100%;background:var(--navy-600);transition:width .3s}
+    .metrics{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}.metric strong{font-size:14px}.summary-actions{padding:15px;display:flex;flex-direction:column;gap:8px;justify-content:center}
+    .btn{height:34px;border:1px solid var(--gray-200);background:#fff;color:var(--gray-800);border-radius:3px;padding:0 13px;font-weight:600;white-space:nowrap}
+    .btn:hover:not(:disabled){background:var(--gray-50)}.btn.primary{background:var(--navy-700);border-color:var(--navy-700);color:#fff}.btn.primary:hover:not(:disabled){background:var(--navy-900)}
+    .btn.danger{color:var(--red-700);border-color:#efb5af}.btn.small{height:28px;padding:0 9px;font-size:11px}.btn.link{height:auto;border:0;padding:0;background:none;color:var(--navy-600);text-decoration:underline}
+    .workspace{display:grid;grid-template-columns:320px minmax(500px,1.25fr) minmax(400px,1fr);gap:12px;align-items:start}
+    .panel{background:#fff;border:1px solid var(--gray-200);min-width:0}.panel-title{height:46px;border-bottom:1px solid var(--gray-200);display:flex;align-items:center;justify-content:space-between;padding:0 14px}
+    .panel-title h2,.section-head h3{font-size:13px;margin:0}.count{color:var(--gray-600);font-size:11px}
+    .sample-panel{position:sticky;top:120px;max-height:calc(100vh - 138px);overflow:hidden;display:flex;flex-direction:column}
+    .filters{padding:10px;border-bottom:1px solid var(--gray-100)}.search{position:relative;margin-bottom:8px}.search input{width:100%;height:34px;border:1px solid var(--gray-200);padding:0 30px 0 10px}.search span{position:absolute;right:10px;top:8px;color:var(--gray-400)}
+    .filter-row{display:flex;gap:4px;flex-wrap:wrap}.filter-btn{border:1px solid var(--gray-200);background:#fff;border-radius:12px;padding:4px 8px;color:var(--gray-600);font-size:10px}.filter-btn.active{border-color:var(--navy-600);background:var(--blue-50);color:var(--navy-700);font-weight:700}
+    .sample-list{overflow:auto}.sample{padding:12px 13px;border-bottom:1px solid var(--gray-100);cursor:pointer;background:#fff;position:relative}
+    .sample:hover{background:var(--gray-25)}.sample.selected{background:var(--blue-50);box-shadow:inset 3px 0 var(--navy-600)}
+    .sample-top,.sample-meta,.sample-badges{display:flex;align-items:center;justify-content:space-between;gap:8px}.sample-top strong{font-size:12px}.sample-top span{font-weight:700}.sample-vendor{margin:7px 0 6px;font-weight:600}.sample-meta{color:var(--gray-600);font-size:10px;margin-bottom:8px}
+    .badge{display:inline-flex;align-items:center;gap:4px;border:1px solid transparent;border-radius:10px;padding:3px 7px;font-size:10px;white-space:nowrap}
+    .badge.pass{background:var(--green-50);color:var(--green-700);border-color:#b9e0ca}.badge.fail{background:var(--red-50);color:var(--red-700);border-color:#f1c0bc}
+    .badge.review{background:var(--amber-50);color:var(--amber-700);border-color:#ead19b}.badge.na{background:var(--gray-100);color:var(--gray-600);border-color:var(--gray-200)}
+    .badge.info{background:var(--purple-50);color:var(--purple-700);border-color:#d8cff4}.badge.neutral{background:#fff;color:var(--gray-600);border-color:var(--gray-200)}
+    .center-panel,.right-panel{display:grid;gap:12px;background:transparent;border:0}.card{background:#fff;border:1px solid var(--gray-200)}
+    .section-head{height:43px;border-bottom:1px solid var(--gray-100);padding:0 14px;display:flex;align-items:center;justify-content:space-between}.section-body{padding:13px 14px}
+    .transaction-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px 16px}.kv span{display:block;font-size:10px;color:var(--gray-600);margin-bottom:4px}.kv b{font-size:12px}
+    .docs{display:grid;gap:8px}.doc-row{border:1px solid var(--gray-200);padding:10px;display:grid;grid-template-columns:28px 1fr auto;align-items:center;gap:9px}.doc-icon{width:28px;height:34px;background:var(--blue-50);border:1px solid #ccd9e6;display:grid;place-items:center;color:var(--navy-700);font-size:9px;font-weight:700}
+    .doc-row b{display:block;font-size:11px;margin-bottom:3px}.doc-row small{color:var(--gray-600);font-size:10px}.doc-actions{display:flex;gap:6px;margin-top:10px;align-items:center}.hidden-input{display:none}
+    .analysis-steps,.eval-steps{display:grid;gap:6px;padding:12px;background:var(--blue-50);border:1px solid #dce7f1}.step{display:flex;align-items:center;gap:8px;color:var(--gray-600);font-size:11px}.step.active{color:var(--navy-700);font-weight:700}.step.done{color:var(--green-700)}.spinner{width:12px;height:12px;border:2px solid #c4d2df;border-top-color:var(--navy-600);border-radius:50%;animation:spin .7s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}
+    .empty-state{padding:27px 18px;text-align:center;color:var(--gray-600);background:var(--gray-25);border:1px dashed var(--gray-200);line-height:1.7}
+    .table-wrap{overflow:auto}.field-table{width:100%;border-collapse:collapse;min-width:610px}.field-table th{background:var(--gray-50);color:var(--gray-600);font-size:10px;text-align:left;padding:8px;border-bottom:1px solid var(--gray-200)}
+    .field-table td{padding:9px 8px;border-bottom:1px solid var(--gray-100);font-size:11px;vertical-align:middle}.field-table tbody tr{cursor:pointer}.field-table tbody tr:hover{background:var(--blue-50)}
+    .field-id{display:block;color:var(--gray-400);font-size:9px;margin-top:3px}.value-uncertain{filter:blur(.7px);color:var(--amber-700)}
+    .validation-list{display:grid;gap:8px}.validation-item{display:flex;gap:8px;line-height:1.45;font-size:11px}.symbol{font-weight:800;width:16px;flex:none}.ok{color:var(--green-700)}.warn{color:var(--amber-700)}.error{color:var(--red-700)}
+    .preview-tabs{display:flex;border-bottom:1px solid var(--gray-200)}.tab{height:36px;border:0;background:#fff;padding:0 15px;color:var(--gray-600);border-bottom:2px solid transparent}.tab.active{color:var(--navy-700);border-bottom-color:var(--navy-700);font-weight:700}
+    .paper{margin:12px;background:#fff;border:1px solid var(--gray-200);box-shadow:0 1px 4px rgba(20,33,61,.07);padding:22px 24px;min-height:265px}.paper-company{font-size:10px;color:var(--gray-600)}.paper h3{text-align:center;margin:7px 0 19px;font-size:16px}.paper-grid{display:grid;grid-template-columns:130px 1fr;gap:0}.paper-grid dt,.paper-grid dd{margin:0;padding:7px;border-bottom:1px solid var(--gray-100);font-size:11px}
+    .paper-grid dt{background:var(--gray-25);color:var(--gray-600)}.anchor{transition:background .3s,box-shadow .3s}.anchor.highlight{background:#fff0a8!important;box-shadow:0 0 0 3px rgba(230,180,20,.22);animation:flash 1.2s ease}@keyframes flash{50%{background:#ffd968}}
+    .result-card{border-left:4px solid var(--gray-400);padding:17px 16px}.result-card.pass{background:var(--green-50);border-left-color:var(--green-700)}.result-card.fail{background:var(--red-50);border-left-color:var(--red-700)}.result-card.review{background:var(--amber-50);border-left-color:var(--amber-700)}.result-card.na{background:var(--gray-50)}
+    .result-eyebrow{font-size:10px;color:var(--gray-600);margin-bottom:7px}.result-card h2{font-size:20px;margin:0 0 8px}.result-card p{margin:0;line-height:1.6;font-size:11px}.finalized{margin-top:10px;font-weight:700;color:var(--navy-700)}
+    .conditions{display:grid}.condition{padding:12px 14px;border-bottom:1px solid var(--gray-100);cursor:pointer}.condition:hover{background:var(--gray-25)}.condition-head{display:flex;justify-content:space-between;gap:8px;margin-bottom:5px}.condition-head b{font-size:11px}.condition p{margin:0;color:var(--gray-600);line-height:1.5;font-size:10px}
+    .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:11px}.field{display:grid;gap:5px}.field.full{grid-column:1/-1}.field label{font-size:10px;color:var(--gray-600);font-weight:700}.field textarea,.field select,.field input{border:1px solid var(--gray-200);background:#fff;padding:8px;color:var(--gray-800)}.field textarea{min-height:72px;resize:vertical;line-height:1.5}.review-actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:12px}
+    details{border-top:1px solid var(--gray-100)}summary{padding:12px 14px;cursor:pointer;font-weight:700;font-size:11px}.run-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px;padding:0 14px 14px}
+    .timeline{padding:0 14px 14px}.event{position:relative;padding:0 0 14px 18px;border-left:1px solid var(--gray-200);font-size:10px;line-height:1.5}.event:before{content:"";position:absolute;left:-4px;top:2px;width:7px;height:7px;background:var(--navy-600);border-radius:50%}.event time{display:block;color:var(--gray-400)}
+    .other-page{background:#fff;border:1px solid var(--gray-200);min-height:520px;display:grid;place-items:center;text-align:center}.other-page h2{font-size:19px}.other-page p{color:var(--gray-600)}.other-page .btn{margin-top:12px}
+    .modal-layer{position:fixed;inset:0;background:rgba(20,33,61,.5);z-index:100;display:grid;place-items:center;padding:30px}.modal{background:#fff;width:min(650px,95vw);max-height:90vh;overflow:auto;box-shadow:0 12px 35px rgba(0,0,0,.2)}
+    .modal.large{width:min(920px,95vw)}.modal-head{height:54px;padding:0 18px;border-bottom:1px solid var(--gray-200);display:flex;align-items:center;justify-content:space-between}.modal-head h2{font-size:15px}.modal-close{border:0;background:none;font-size:20px;color:var(--gray-600)}
+    .modal-body{padding:18px}.modal-foot{padding:13px 18px;border-top:1px solid var(--gray-200);display:flex;justify-content:flex-end;gap:8px}.modal-section{margin-bottom:16px}.modal-section h3{font-size:11px;margin:0 0 6px}.modal-section p{margin:0;line-height:1.6}.rule-list{margin:6px 0;padding-left:20px;line-height:1.8}
+    .zoom-doc{background:#f0f1f3;padding:18px}.zoom-paper{background:#fff;padding:28px;margin:auto;max-width:620px;box-shadow:0 2px 8px rgba(0,0,0,.12)}.zoom-value{font-size:20px;background:#fff0a8;padding:6px}
+    .workpaper{border:1px solid var(--gray-200);padding:30px 36px}.workpaper h1{text-align:center;font-size:20px;margin:0 0 28px}.wp-grid{display:grid;grid-template-columns:140px 1fr;border-top:2px solid var(--navy-900)}.wp-grid dt,.wp-grid dd{margin:0;padding:9px 11px;border-bottom:1px solid var(--gray-200)}.wp-grid dt{background:var(--gray-50);font-weight:700}.wp-text{line-height:1.8;white-space:pre-line}
+    .toast-zone{position:fixed;right:22px;bottom:22px;z-index:200;display:grid;gap:8px}.toast{width:330px;background:var(--gray-800);color:#fff;padding:13px 15px;box-shadow:0 5px 18px rgba(0,0,0,.18);animation:toastIn .2s ease}.toast b{display:block;font-size:11px;margin-bottom:3px}.toast span{font-size:10px;color:#dce1e8}@keyframes toastIn{from{opacity:0;transform:translateY(8px)}}
+    .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+    @media(max-width:1580px){:root{--sidebar:200px}.workspace{grid-template-columns:300px minmax(460px,1.15fr) minmax(360px,.9fr)}.summary{grid-template-columns:1.1fr 1fr}.summary-actions{grid-column:1/-1;flex-direction:row;border-top:1px solid var(--gray-100);padding:8px}.control-info{grid-template-columns:repeat(4,1fr)}}
+    @media(max-width:1200px){.workspace{grid-template-columns:290px minmax(500px,1fr)}.right-panel{grid-column:1/-1;margin-left:302px}.summary{grid-template-columns:1fr}.control-info,.summary-progress{border-right:0;border-bottom:1px solid var(--gray-100)}}
+    @media print{.sidebar,.topbar,.summary,.sample-panel,.center-panel,.right-panel,.modal-head,.modal-foot,.toast-zone{display:none!important}.main{grid-column:1/-1}.content{padding:0}.modal-layer{position:static;background:#fff;padding:0}.modal{box-shadow:none;width:100%;max-height:none}.modal-body{padding:0}}
+  </style>
+</head>
+<body>
+  <div id="app"></div>
+  <div id="modalRoot"></div>
+  <div class="toast-zone" id="toastZone" aria-live="polite"></div>
+  <script>
+  (() => {
+    "use strict";
+
+    // 1. Constants and configuration
+    const STORAGE_KEY = "kff-control-evaluation-v1";
+    const controlDefinition = {
+      id:"AP-EXP-001",name:"고액 비용 사전 승인",version:"3.2",threshold:10000000,effectiveFrom:"2026-01-01",
+      requiredDocuments:["PAYMENT_VOUCHER","APPROVAL_DOCUMENT"],
+      requiredFields:["expenseAmount","paymentDate","departmentHeadApprovalStatus","departmentHeadApprovalDate","financeApprovalStatus","financeApprovalDate"]
+    };
+    const roundInfo={name:"2026년 2분기 정기 운영평가",subtitle:"2026년 2분기 비용 및 자금 프로세스",process:"비용 및 자금",period:"2026.04.01 ~ 2026.06.30"};
+    const FIELD_META={
+      expenseAmount:["지급금액","expense.amount","PAYMENT_VOUCHER","payment-amount"],
+      paymentDate:["지급일","expense.payment_date","PAYMENT_VOUCHER","payment-date"],
+      departmentHeadApprovalStatus:["부서장 승인 여부","department_head.approval_status","APPROVAL_DOCUMENT","department-status"],
+      departmentHeadApprovalDate:["부서장 승인일","department_head.approval_date","APPROVAL_DOCUMENT","department-date"],
+      financeApprovalStatus:["재무담당 임원 승인 여부","finance_executive.approval_status","APPROVAL_DOCUMENT","finance-status"],
+      financeApprovalDate:["재무담당 임원 승인일","finance_executive.approval_date","APPROVAL_DOCUMENT","finance-date"]
+    };
+    const RESULT_TEXT={PASS:"통제 충족",FAIL:"통제 미충족",REVIEW:"추가 검토 필요","N/A":"평가 대상 아님"};
+    const FIELD_STATUS={EXTRACTED:"확인",REQUIRED_DOCUMENT_MISSING:"증빙 미제출",EVIDENCE_ABSENT:"필수 항목 없음",EXTRACTION_UNCERTAIN:"확인 필요",CONFLICT:"증빙 불일치",INVALID:"형식 오류",NOT_APPLICABLE:"적용 대상 아님"};
+    const STATUS_FILTERS=["전체","미평가","평가 완료","추가 검토","증빙 보완","적용 제외"];
+    const MENUS=["대시보드","운영평가","증빙검토","예외사항","조서관리","통제기준","시스템 이력"];
+
+    // 2. Mock business data
+    const rawSamples=[
+      {id:"EXP-24001",date:"2026-06-12",amount:25000000,department:"구매팀",vendor:"한빛솔루션",purpose:"구매시스템 유지보수비",paymentDate:"2026-06-15",dhDate:"2026-06-10",finDate:"2026-06-12",status:"평가 완료",result:"PASS",analyzed:true,finalized:true},
+      {id:"EXP-24002",date:"2026-06-15",amount:32000000,department:"영업기획팀",vendor:"세림컨설팅",purpose:"영업전략 자문 용역비",paymentDate:"2026-06-15",dhDate:"2026-06-12",finDate:"2026-06-17",status:"미평가",result:null,analyzed:false},
+      {id:"EXP-24003",date:"2026-06-18",amount:18000000,department:"마케팅팀",vendor:"에이원미디어",purpose:"브랜드 캠페인 집행비",paymentDate:"2026-06-18",dhDate:"2026-06-13",finDate:null,actualFinDate:"2026-06-16",status:"추가 검토 필요",result:"REVIEW",analyzed:true},
+      {id:"EXP-24004",date:"2026-06-20",amount:8000000,department:"IT운영팀",vendor:"디지털웍스",purpose:"전산장비 정기점검비",paymentDate:"2026-06-20",dhDate:null,finDate:null,status:"적용 제외",result:"N/A",analyzed:true},
+      {id:"EXP-24005",date:"2026-06-24",amount:20000000,department:"총무팀",vendor:"미래오피스",purpose:"사무환경 개선비",paymentDate:"2026-06-24",dhDate:null,finDate:null,status:"증빙 보완",result:"REVIEW",analyzed:true,missingApproval:true},
+      {id:"EXP-24006",date:"2026-06-27",amount:14000000,department:"재무팀",vendor:"한국리서치서비스",purpose:"시장조사 용역비",paymentDate:"2026-06-27",dhDate:"2026-06-25",finDate:null,status:"미평가",result:null,analyzed:false,financeMissing:true}
+    ];
+
+    // 3. Application state
+    const createFields=(s)=>controlDefinition.requiredFields.map(id=>{
+      let value,status="EXTRACTED";
+      if(id==="expenseAmount") value=s.amount;
+      if(id==="paymentDate") value=s.paymentDate;
+      if(id==="departmentHeadApprovalStatus") value=s.dhDate?"승인":"미확인";
+      if(id==="departmentHeadApprovalDate") value=s.dhDate;
+      if(id==="financeApprovalStatus") value=s.finDate||s.actualFinDate?"승인":"미확인";
+      if(id==="financeApprovalDate") value=s.finDate;
+      if(s.amount<controlDefinition.threshold && id.includes("Approval")) status="NOT_APPLICABLE";
+      else if(s.missingApproval && id.includes("Approval")) status="REQUIRED_DOCUMENT_MISSING";
+      else if(s.financeMissing && (id==="financeApprovalStatus"||id==="financeApprovalDate")) status="EVIDENCE_ABSENT";
+      else if(s.id==="EXP-24003"&&id==="financeApprovalDate"){status="EXTRACTION_UNCERTAIN";value="2026-06-1?";}
+      const unavailable=["REQUIRED_DOCUMENT_MISSING","EVIDENCE_ABSENT","NOT_APPLICABLE"].includes(status);
+      return {id,label:FIELD_META[id][0],internalId:FIELD_META[id][1],value,status,source:{documentType:FIELD_META[id][2],fileName:unavailable?null:(FIELD_META[id][2]==="PAYMENT_VOUCHER"?"payment_voucher_":"approval_document_")+s.id+".pdf",page:unavailable?null:1,text:value==null?"확인 불가":String(value),anchorId:unavailable?null:FIELD_META[id][3]},verifiedByUser:false};
+    });
+    const initialState=()=>({
+      activeMenu:"운영평가",selectedId:"EXP-24002",filter:"전체",search:"",showFieldIds:false,previewTab:"PAYMENT_VOUCHER",highlight:null,
+      samples:Object.fromEntries(rawSamples.map(s=>[s.id,{...s,fields:createFields(s),review:s.result==="FAIL"?"통제 미충족 사항에 대한 개선조치가 필요함.":s.result==="REVIEW"?"필수 승인 문서 또는 승인일을 확인할 수 없어 추가 검토가 필요함.":"",followUp:"후속조치 없음",importance:"중간",events:s.id==="EXP-24001"?[
+        {time:"2026.07.08 10:12:00",title:"증빙 분석 완료"},{time:"2026.07.08 10:15:00",title:"운영평가 실행",detail:"결과: 통제 충족"},{time:"2026.07.08 10:20:00",title:"평가 결과 확정"}
+      ]:[],evaluation:null,evaluatedAt:s.id==="EXP-24001"?"2026.07.08 10:15:00":null,tempFiles:[],requestInfo:null,reopenHistory:[]}]))
+    });
+    let state=loadState()||initialState();
+    let processing={analysis:false,evaluation:false,steps:[],active:0};
+
+    // 4. Utility functions
+    const e=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]));
+    const won=n=>new Intl.NumberFormat("ko-KR").format(Number(n||0))+"원";
+    const dateDot=v=>v&&/^\d{4}-\d{2}-\d{2}$/.test(v)?v.replaceAll("-","."):v||"-";
+    const toDateOnly=value=>{if(!value||!value.includes("-"))return null;const [y,m,d]=value.split("-").map(Number);return new Date(Date.UTC(y,m-1,d));};
+    const nowText=()=>{
+      const parts=Object.fromEntries(new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Seoul",year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",second:"2-digit",hour12:false}).formatToParts(new Date()).map(p=>[p.type,p.value]));
+      return `${parts.year}.${parts.month}.${parts.day} ${parts.hour}:${parts.minute}:${parts.second}`;
+    };
+    const systemDateText=()=>nowText().slice(0,10);
+    const futureDateISO=(days=5)=>{const d=new Date();d.setDate(d.getDate()+days);return new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Seoul",year:"numeric",month:"2-digit",day:"2-digit"}).format(d);};
+    const current=()=>state.samples[state.selectedId];
+    const resultClass=r=>r==="PASS"?"pass":r==="FAIL"?"fail":r==="REVIEW"?"review":"na";
+    const resultSymbol=r=>r==="PASS"?"✓":r==="FAIL"?"!":r==="REVIEW"?"?":"—";
+    const addEvent=(s,title,detail="")=>{s.events.unshift({time:nowText(),title,detail});saveState();};
+    function toast(title,detail="업무 상태가 정상적으로 반영되었습니다."){const el=document.createElement("div");el.className="toast";el.innerHTML=`<b>${e(title)}</b><span>${e(detail)}</span>`;document.querySelector("#toastZone").append(el);setTimeout(()=>el.remove(),3600);}
+    const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+    const setModal=html=>{document.querySelector("#modalRoot").innerHTML=html;document.body.style.overflow="hidden";setTimeout(()=>document.querySelector(".modal button, .modal input")?.focus(),0);};
+    const closeModal=()=>{document.querySelector("#modalRoot").innerHTML="";document.body.style.overflow="";};
+    function statusBadge(s){
+      const cls=s.status==="평가 완료"?"pass":s.status==="증빙 보완"||s.status.includes("검토")?"review":s.status==="적용 제외"?"na":"neutral";
+      return `<span class="badge ${cls}">${s.status==="평가 완료"?"✓":s.status==="증빙 보완"?"!":s.status.includes("검토")?"?":"•"} ${e(s.status)}</span>`;
+    }
+    const evaluationBadge=r=>r?`<span class="badge ${resultClass(r)}">${resultSymbol(r)} ${RESULT_TEXT[r]}</span>`:`<span class="badge neutral">— 미실행</span>`;
+    function defaultReview(ev){
+      const byReason={
+        ALL_REQUIRED_APPROVALS_COMPLETED:"부서장과 재무담당 임원의 승인이 모두 지급 전에 완료되어 통제 충족으로 판단함.",
+        FINANCE_APPROVAL_NOT_BEFORE_PAYMENT:"재무담당 임원 승인이 지급 이후 완료되어 통제 미충족으로 판단함.",
+        DEPARTMENT_HEAD_APPROVAL_NOT_BEFORE_PAYMENT:"부서장 승인이 지급 전에 완료되지 않아 통제 미충족으로 판단함.",
+        DEPARTMENT_HEAD_APPROVAL_MISSING:"부서장 승인 기록이 확인되지 않아 통제 미충족으로 판단함.",
+        FINANCE_EXECUTIVE_APPROVAL_MISSING:"재무담당 임원 승인 기록이 확인되지 않아 통제 미충족으로 판단함.",
+        REQUIRED_APPROVAL_DOCUMENT_MISSING:"필수 전자결재 승인 문서가 제출되지 않아 증빙 보완이 필요함.",
+        REQUIRED_FIELD_UNCERTAIN:"필수 승인일을 확인할 수 없어 원본 확인 및 추가 검토가 필요함.",
+        EVIDENCE_CONFLICT:"증빙 간 정보가 일치하지 않아 추가 검토가 필요함.",
+        BELOW_APPROVAL_THRESHOLD:"지급금액이 통제 적용 기준 미만으로 평가 대상에서 제외함."
+      };
+      return byReason[ev?.reasonCode]||ev?.summary||"평가 결과에 대한 담당자 검토가 필요함.";
+    }
+    function workpaperNarrative(s,ev){
+      const dh=dateDot(s.fields.find(f=>f.id==="departmentHeadApprovalDate")?.value),fin=dateDot(s.fields.find(f=>f.id==="financeApprovalDate")?.value),pay=dateDot(s.paymentDate);
+      const byReason={
+        ALL_REQUIRED_APPROVALS_COMPLETED:`지급금액 ${won(s.amount)}의 거래에 대해 부서장 승인일 ${dh} 및 재무담당 임원 승인일 ${fin}이 모두 지급일 ${pay} 전에 완료된 것으로 확인되었습니다.`,
+        FINANCE_APPROVAL_NOT_BEFORE_PAYMENT:`지급금액 ${won(s.amount)}의 거래에 대해 부서장 승인은 지급 전에 완료되었으나, 재무담당 임원 승인은 지급일 ${pay} 이후인 ${fin}에 완료된 것으로 확인되었습니다.`,
+        DEPARTMENT_HEAD_APPROVAL_NOT_BEFORE_PAYMENT:`부서장 승인일 ${dh}이 지급일 ${pay} 이전이 아닌 것으로 확인되어 통제 미충족으로 평가하였습니다.`,
+        DEPARTMENT_HEAD_APPROVAL_MISSING:"부서장 승인 기록이 제출 증빙에서 확인되지 않아 통제 미충족으로 평가하였습니다.",
+        FINANCE_EXECUTIVE_APPROVAL_MISSING:"재무담당 임원 승인 기록이 제출 증빙에서 확인되지 않아 통제 미충족으로 평가하였습니다.",
+        REQUIRED_APPROVAL_DOCUMENT_MISSING:"필수 전자결재 승인 문서가 제출되지 않아 운영평가를 확정하지 못하였으며 증빙 보완이 필요합니다.",
+        REQUIRED_FIELD_UNCERTAIN:"재무담당 임원 승인일을 원본 증빙에서 추가로 확인해야 하므로 평가 결과를 확정하지 않았습니다.",
+        BELOW_APPROVAL_THRESHOLD:`지급금액 ${won(s.amount)}은 통제 적용 기준 ${won(controlDefinition.threshold)} 미만이므로 평가 대상에서 제외하였습니다.`
+      };
+      return byReason[ev.reasonCode]||ev.summary;
+    }
+
+    // 5. Rendering functions
+    function render(){
+      document.querySelector("#app").innerHTML=`
+        <div class="app">
+          <aside class="sidebar">
+            <div class="brand"><strong>AI 통제 운영평가<br>시스템</strong><small>내부회계관리제도 통제 운영평가</small></div>
+            <div class="company">Korea First Financial</div>
+            <nav class="nav" aria-label="업무 메뉴">${MENUS.map((m,i)=>`<button class="nav-btn ${state.activeMenu===m?"active":""}" data-menu="${m}"><span class="nav-icon">${["▦","▣","▤","△","▧","§","≡"][i]}</span>${m}</button>`).join("")}</nav>
+            <div class="sidebar-user"><div class="user-row"><span class="avatar">김</span><div><b>내부통제팀 김민지</b><small>평가자</small></div></div><button class="logout" data-action="logout">로그아웃</button></div>
+          </aside>
+          <main class="main">
+            <header class="topbar"><div class="header-main"><div class="header-title"><h1>${e(state.activeMenu)}</h1><p>${state.activeMenu==="운영평가"?roundInfo.subtitle:"내부통제 업무 관리"}</p></div><div class="header-tools"><button class="icon-btn" aria-label="알림" title="알림">●</button><button class="icon-btn" aria-label="도움말" title="도움말">?</button><div class="date-status"><span class="live-dot"></span>시스템 정상<br>${systemDateText()}</div><span class="avatar">김</span></div></div><div class="crumb">${state.activeMenu==="운영평가"?"운영평가 &gt; 비용 및 자금 &gt; AP-EXP-001":e(state.activeMenu)+" &gt; 업무 안내"}</div></header>
+            <div class="content">${state.activeMenu==="운영평가"?renderEvaluationPage():renderOtherPage()}</div>
+          </main>
+        </div>`;
+    }
+    function renderOtherPage(){
+      return `<section class="other-page"><div><div class="avatar" style="margin:auto;width:46px;height:46px">K</div><h2>${e(state.activeMenu)}</h2><p>${e(state.activeMenu)} 업무 화면입니다.<br>운영평가 메뉴에서 표본별 평가 업무를 수행할 수 있습니다.</p>${state.activeMenu==="시스템 이력"?`<button class="btn danger" data-action="reset-data">평가 데이터 초기화</button>`:`<button class="btn primary" data-menu="운영평가">운영평가로 이동</button>`}</div></section>`;
+    }
+    function renderEvaluationPage(){
+      const samples=Object.values(state.samples), completed=samples.filter(s=>s.status==="평가 완료"||s.status==="적용 제외").length;
+      const review=samples.filter(s=>s.status.includes("검토")).length,evidence=samples.filter(s=>s.status==="증빙 보완").length,unassessed=samples.filter(s=>s.status==="미평가").length;
+      return `<section class="summary">
+        <div class="control-info">
+          <div class="info-item"><span>평가 차수</span><b>2026년 2분기 정기 운영평가</b></div><div class="info-item"><span>프로세스</span><b>비용 및 자금</b></div>
+          <div class="info-item"><span>통제코드</span><b>AP-EXP-001</b></div><div class="info-item"><span>통제명</span><b>고액 비용 사전 승인</b></div>
+          <div class="info-item"><span>평가방식</span><b>표본평가</b></div><div class="info-item"><span>평가기간</span><b>2026.04.01 ~ 2026.06.30</b></div><div class="info-item"><span>평가상태</span><b class="status-text">● 진행 중</b></div>
+        </div>
+        <div class="summary-progress"><div class="progress-head"><b>운영평가 진행률</b><strong>${completed}/6건 완료</strong></div><div class="progress"><i style="width:${completed/6*100}%"></i></div>
+          <div class="metrics"><div class="metric"><span>전체 표본</span><strong>6</strong></div><div class="metric"><span>처리 완료</span><strong>${completed}</strong></div><div class="metric"><span>추가 검토</span><strong>${review}</strong></div><div class="metric"><span>증빙 보완</span><strong>${evidence}</strong></div><div class="metric"><span>미평가</span><strong>${unassessed}</strong></div></div>
+        </div>
+        <div class="summary-actions"><button class="btn" data-action="show-control">통제 기준 보기</button><button class="btn" data-action="export-list">표본 목록 내보내기</button></div>
+      </section>
+      <div class="workspace">${renderSamplePanel()}<div class="center-panel">${renderCenter()}</div><div class="right-panel">${renderRight()}</div></div>`;
+    }
+    function renderSamplePanel(){
+      const q=state.search.toLowerCase(), visible=Object.values(state.samples).filter(s=>(state.filter==="전체"||s.status===state.filter||state.filter==="추가 검토"&&s.status.includes("검토"))&&(!q||[s.id,s.vendor,s.department].some(v=>v.toLowerCase().includes(q))));
+      return `<section class="panel sample-panel"><div class="panel-title"><h2>평가 표본</h2><span class="count">${visible.length} / 6건</span></div><div class="filters"><div class="search"><label class="sr-only" for="search">표본 검색</label><input id="search" value="${e(state.search)}" placeholder="표본번호·거래처·부서 검색"><span>⌕</span></div><div class="filter-row">${STATUS_FILTERS.map(f=>`<button class="filter-btn ${state.filter===f?"active":""}" data-filter="${f}">${f}</button>`).join("")}</div></div><div class="sample-list">${visible.map(s=>`
+        <article class="sample ${s.id===state.selectedId?"selected":""}" data-sample="${s.id}" tabindex="0" aria-label="${s.id} ${s.vendor}">
+          <div class="sample-top"><strong>${s.id}</strong><span>${won(s.amount)}</span></div><div class="sample-vendor">${e(s.vendor)}</div><div class="sample-meta"><span>${e(s.department)}</span><span>${dateDot(s.date)}</span></div><div class="sample-badges">${statusBadge(s)}${evaluationBadge(s.evaluation?.result||s.result)}</div>
+        </article>`).join("")||`<div class="empty-state">검색 조건에 맞는 표본이 없습니다.</div>`}</div></section>`;
+    }
+    function renderCenter(){
+      const s=current();
+      return `${renderTransaction(s)}${renderDocuments(s)}${renderFields(s)}${s.analyzed?renderValidation(s):""}${renderPreview(s)}`;
+    }
+    function renderTransaction(s){
+      return `<section class="card"><div class="section-head"><h3>거래 기본정보</h3>${statusBadge(s)}</div><div class="section-body"><div class="transaction-grid">
+        ${[["표본번호",s.id],["거래처",s.vendor],["담당부서",s.department],["지급금액",won(s.amount)],["거래일",dateDot(s.date)],["지급일",dateDot(s.paymentDate)],["평가상태",s.status]].map(x=>`<div class="kv"><span>${x[0]}</span><b>${e(x[1])}</b></div>`).join("")}
+      </div></div></section>`;
+    }
+    function renderDocuments(s){
+      const voucher={type:"지급 전표",file:`payment_voucher_${s.id}.pdf`}, approval={type:"전자결재 승인 문서",file:`approval_document_${s.id}.pdf`};
+      return `<section class="card"><div class="section-head"><h3>제출 증빙</h3><span class="count">${s.missingApproval?"1":"2"}건 제출</span></div><div class="section-body">
+        <div class="docs">${docRow(voucher)}${s.missingApproval?`<div class="doc-row"><span class="doc-icon">PDF</span><div><b>전자결재 승인 문서</b><small class="error">필수 증빙이 제출되지 않았습니다.</small></div><span class="badge review">! 미제출</span></div>`:docRow(approval)}${(s.tempFiles||[]).map(f=>`<div class="doc-row"><span class="doc-icon">FILE</span><div><b>추가 증빙</b><small>${e(f)}</small></div><span class="badge info">임시</span></div>`).join("")}</div>
+        <div class="doc-actions"><button class="btn small" data-action="open-original">원문 보기</button><button class="btn small" data-action="add-evidence" ${s.finalized?"disabled":""}>증빙 추가</button><input class="hidden-input" id="fileInput" type="file" multiple><button class="btn primary small" data-action="analyze" ${processing.analysis||s.finalized?"disabled":""} title="${s.finalized?"평가 재개 후 증빙을 다시 분석할 수 있습니다.":"증빙 분석"}">${s.analyzed?"분석 결과 재조회":"증빙 분석"}</button></div>
+        ${processing.analysis?renderSteps(processing.steps,processing.active,"analysis-steps"):""}
+      </div></section>`;
+    }
+    function docRow(d){return `<div class="doc-row"><span class="doc-icon">PDF</span><div><b>${d.type}</b><small>${e(d.file)} · 1페이지</small></div><span class="badge pass">✓ 제출 완료</span></div>`;}
+    function renderSteps(steps,active,cls){return `<div class="${cls}" role="status">${steps.map((x,i)=>`<div class="step ${i<active?"done":i===active?"active":""}"><span>${i<active?"✓":i===active?'<i class="spinner"></i>':"○"}</span>${x}</div>`).join("")}</div>`;}
+    function renderFields(s){
+      if(!s.analyzed)return `<section class="card"><div class="section-head"><h3>필수 평가 항목</h3></div><div class="section-body"><div class="empty-state">제출된 증빙을 분석하면 통제 평가에 필요한 항목을 확인할 수 있습니다.</div></div></section>`;
+      return `<section class="card"><div class="section-head"><h3>필수 평가 항목 추출 결과</h3><button class="btn link" data-action="toggle-field-ids">${state.showFieldIds?"상세정보 닫기":"상세정보"}</button></div><div class="table-wrap"><table class="field-table"><thead><tr><th>평가 항목</th><th>추출 결과</th><th>증빙 출처</th><th>상태</th><th>작업</th></tr></thead><tbody>${s.fields.map(f=>`<tr data-field="${f.id}" tabindex="0"><td><b>${f.label}</b>${state.showFieldIds?`<small class="field-id">${f.internalId}</small>`:""}</td><td class="${f.status==="EXTRACTION_UNCERTAIN"?"value-uncertain":""}">${f.id==="expenseAmount"?won(f.value):dateDot(f.value)||e(f.value)} ${f.verifiedByUser?`<span class="badge info">담당자 확인</span>`:""}</td><td>${f.source.fileName?`${f.source.documentType==="PAYMENT_VOUCHER"?"지급 전표":"전자결재 문서"} ${f.source.page}p`:"—"}</td><td>${fieldStatusBadge(f.status)}</td><td>${f.status==="EXTRACTION_UNCERTAIN"?`<button class="btn small" data-action="verify-field">추출값 수정</button>`:f.source.anchorId?`<button class="btn link" data-field="${f.id}">근거 보기</button>`:"—"}</td></tr>`).join("")}</tbody></table></div></section>`;
+    }
+    function fieldStatusBadge(st){const text=FIELD_STATUS[st]||st,cls=st==="EXTRACTED"?"pass":st==="NOT_APPLICABLE"?"na":st==="EXTRACTION_UNCERTAIN"?"review":st.includes("MISSING")||st==="EVIDENCE_ABSENT"?"fail":"review";return `<span class="badge ${cls}">${cls==="pass"?"✓":cls==="na"?"—":"!"} ${text}</span>`;}
+    function renderValidation(s){
+      let messages,kind="ok",validationLabel="적정";
+      if(s.amount<controlDefinition.threshold)messages=["지급금액이 적용 기준 미만으로 승인 문서 검토 대상이 아닙니다.","통제 적용 여부를 우선 판정할 수 있습니다."];
+      else if(s.missingApproval){messages=["전자결재 승인 문서가 제출되지 않았습니다.","자동 운영평가를 진행할 수 없습니다.","증빙 보완 요청 후 평가를 다시 수행해 주세요."];kind="error";validationLabel="보완 필요";}
+      else if(s.fields.some(f=>["EXTRACTION_UNCERTAIN","CONFLICT","INVALID"].includes(f.status))){messages=["재무담당 임원 승인일을 자동으로 확인하지 못했습니다.","원본 증빙을 확인한 뒤 값을 입력해 주세요."];kind="warn";validationLabel="확인 필요";}
+      else if(s.fields.some(f=>f.status==="EVIDENCE_ABSENT")){messages=["재무담당 임원 승인 기록이 제출 증빙에서 확인되지 않았습니다.","확인된 승인 부재를 기준으로 운영평가를 실행할 수 있습니다."];kind="error";validationLabel="승인 없음";}
+      else messages=["필수 증빙 2건이 모두 제출되었습니다.","거래번호가 증빙 간 일치합니다.","필수 평가 항목 6건이 확인되었습니다.","각 평가 항목의 원본 위치가 확인되었습니다.","증빙 간 금액 및 날짜 충돌이 없습니다."];
+      const disabled=s.missingApproval||s.fields.some(f=>["EXTRACTION_UNCERTAIN","CONFLICT","INVALID"].includes(f.status));
+      return `<section class="card"><div class="section-head"><h3>증빙 적정성 검토</h3><span class="badge ${kind==="ok"?"pass":kind==="warn"?"review":"fail"}">${kind==="ok"?"✓":kind==="warn"?"?":"!"} ${validationLabel}</span></div><div class="section-body"><div class="validation-list">${messages.map(m=>`<div class="validation-item"><span class="symbol ${kind}">${kind==="ok"?"✓":"!"}</span><span>${m}</span></div>`).join("")}</div><div class="doc-actions">${kind==="warn"?`<button class="btn" data-action="verify-field">원본 확인</button><button class="btn" data-action="verify-field">추출값 수정</button>`:""}${s.missingApproval?`<button class="btn danger" data-action="request-evidence">증빙 보완 요청</button>`:""}<button class="btn primary" data-action="evaluate" ${disabled||processing.evaluation||s.finalized?"disabled":""} title="${s.finalized?"평가 재개 후 다시 실행할 수 있습니다.":disabled?"필수 증빙과 평가 항목을 먼저 확인해 주세요.":"운영평가 실행"}">운영평가 실행</button></div>${processing.evaluation?renderSteps(processing.steps,processing.active,"eval-steps"):""}</div></section>`;
+    }
+    function renderPreview(s){
+      const approval=state.previewTab==="APPROVAL_DOCUMENT";
+      return `<section class="card"><div class="section-head"><h3>문서 미리보기</h3><span class="count">1 / 1 페이지</span></div><div class="preview-tabs"><button class="tab ${!approval?"active":""}" data-tab="PAYMENT_VOUCHER">지급 전표</button><button class="tab ${approval?"active":""}" data-tab="APPROVAL_DOCUMENT" ${s.missingApproval?"disabled":""}>전자결재 문서</button></div>
+      <div class="paper"><div class="paper-company">${approval?"Korea First Financial · 전자결재":"Korea First Financial"}</div><h3>${approval?"비용 지급 승인서":"지급 전표"}</h3>${approval?renderApprovalPaper(s):renderVoucherPaper(s)}</div></section>`;
+    }
+    function anchor(id,value){return `<dd id="${id}" class="anchor ${state.highlight===id?"highlight":""}">${e(value)}</dd>`;}
+    function renderVoucherPaper(s){return `<dl class="paper-grid"><dt>전표번호</dt>${anchor("voucher-id",s.id)}<dt>기안부서</dt>${anchor("voucher-dept",s.department)}<dt>거래처</dt>${anchor("voucher-vendor",s.vendor)}<dt>지급금액</dt>${anchor("payment-amount",won(s.amount))}<dt>지급일</dt>${anchor("payment-date",dateDot(s.paymentDate))}<dt>지급목적</dt>${anchor("voucher-purpose",s.purpose)}</dl>`;}
+    function renderApprovalPaper(s){const uncertain=s.id==="EXP-24003"&&!s.fields.find(f=>f.id==="financeApprovalDate").verifiedByUser;return `<dl class="paper-grid"><dt>신청부서</dt>${anchor("approval-dept",s.department)}<dt>거래처</dt>${anchor("approval-vendor",s.vendor)}<dt>신청금액</dt>${anchor("approval-amount",won(s.amount))}<dt>부서장 승인</dt>${anchor("department-status",s.dhDate?"승인":"승인 기록 없음")}<dt>승인일</dt>${anchor("department-date",dateDot(s.dhDate))}<dt>재무담당 임원 승인</dt>${anchor("finance-status",s.finDate||s.actualFinDate?"승인":"승인 기록 없음")}<dt>승인일</dt><dd id="finance-date" class="anchor ${state.highlight==="finance-date"?"highlight":""} ${uncertain?"value-uncertain":""}">${uncertain?"2026.06.1?":dateDot(s.fields.find(f=>f.id==="financeApprovalDate")?.value)}</dd></dl>`;}
+    function renderRight(){
+      const s=current(),ev=s.evaluation;
+      if(!ev)return `<section class="card"><div class="section-head"><h3>판정 및 검토</h3></div><div class="section-body"><div class="empty-state">증빙 분석이 완료된 후 운영평가를 실행할 수 있습니다.</div></div></section>${renderRunInfo(s)}`;
+      return `<section class="card">${renderResult(s,ev)}</section><section class="card"><div class="section-head"><h3>평가 항목별 판정 근거</h3><button class="btn link" data-action="show-detail">상세 판정 근거</button></div><div class="conditions">${ev.conditions.map(c=>`<div class="condition" data-condition="${c.id}" tabindex="0"><div class="condition-head"><b>${c.label}</b>${conditionBadge(c.status)}</div><p>${c.description}</p></div>`).join("")}</div></section>${renderReview(s,ev)}${renderRunInfo(s)}`;
+    }
+    function renderResult(s,ev){return `<div class="result-card ${resultClass(ev.result)}"><div class="result-eyebrow">운영평가 결과</div><h2>${resultSymbol(ev.result)} ${RESULT_TEXT[ev.result]}</h2><p>${e(ev.summary)}</p>${s.finalized?`<div class="finalized">✓ 평가 결과 확정됨 · 내부통제팀 김민지</div>`:""}</div>`;}
+    function conditionBadge(st){const map={PASS:["pass","✓ 충족"],FAIL:["fail","! 미충족"],REVIEW:["review","? 확인 필요"],"N/A":["na","— 적용 제외"]};return `<span class="badge ${map[st][0]}">${map[st][1]}</span>`;}
+    function renderReview(s,ev){
+      const canFinalize=!!s.evaluation&&ev.result!=="REVIEW";
+      return `<section class="card"><div class="section-head"><h3>평가자 의견 및 후속조치</h3>${s.finalized?`<span class="badge pass">✓ 확정</span>`:""}</div><div class="section-body"><div class="form-grid"><div class="field full"><label for="review">평가자 의견</label><textarea id="review" ${s.finalized?"readonly":""}>${e(s.review||defaultReview(ev))}</textarea></div><div class="field"><label for="followUp">후속조치</label><select id="followUp" ${s.finalized?"disabled":""}>${["후속조치 없음","증빙 보완 요청","개선권고 등록","통제 책임자 확인 요청","예외사항 등록","재평가 예정"].map(x=>`<option ${s.followUp===x?"selected":""}>${x}</option>`).join("")}</select></div><div class="field"><label for="importance">중요도</label><select id="importance" ${s.finalized?"disabled":""}>${["낮음","중간","높음"].map(x=>`<option ${s.importance===x?"selected":""}>${x}</option>`).join("")}</select></div></div><div class="review-actions">${s.finalized?`<button class="btn" data-action="reopen">평가 재개</button>`:`<button class="btn" data-action="save-review">임시 저장</button><button class="btn" data-action="request-review">재검토 요청</button><button class="btn primary" data-action="finalize" ${canFinalize?"":"disabled"} title="${canFinalize?"평가 결과 확정":"추가 검토 또는 증빙 보완 사항을 먼저 해소해 주세요."}">평가 완료</button>`}<button class="btn" data-action="workpaper" ${s.evaluation?"":"disabled"} title="${s.evaluation?"조서 초안 생성":"운영평가를 먼저 실행해 주세요."}">조서 초안 생성</button></div></div></section>`;
+    }
+    function renderRunInfo(s){
+      return `<section class="card"><details><summary>평가 실행 정보</summary><div class="run-grid">${[["실행 ID",s.evaluation?"EV-2026-Q2-"+s.id:"—"],["실행일시",s.evaluatedAt||"—"],["통제 기준","AP-EXP-001 v3.2"],["증빙 스키마","EXP-APPROVAL v1.4"],["문서 분석 버전","Document AI v2.1"],["판정 엔진","Control Engine v1.0"],["평가자","내부통제팀 김민지"]].map(x=>`<div class="kv"><span>${x[0]}</span><b>${x[1]}</b></div>`).join("")}</div></details><details><summary>실행 이력 (${s.events.length})</summary><div class="timeline">${s.events.length?s.events.map(x=>`<div class="event"><time>${e(x.time)}</time><b>${e(x.title)}</b>${x.detail?`<div>${e(x.detail)}</div>`:""}</div>`).join(""):`<div class="empty-state">기록된 실행 이력이 없습니다.</div>`}</div></details></section>`;
+    }
+
+    // 6. Document analysis adapter
+    async function analyzeEvidence(){
+      if(processing.analysis)return;const s=current();if(s.finalized){toast("확정된 평가는 변경할 수 없습니다.","평가 재개 후 증빙을 다시 분석해 주세요.");return;}processing={analysis:true,evaluation:false,steps:["문서 형식 확인","필수 평가 항목 추출","증빙 간 거래정보 대사","원본 위치 연결","분석 완료"],active:0};
+      s.status="증빙 분석 중";addEvent(s,"증빙 분석 시작");render();
+      for(let i=0;i<processing.steps.length;i++){processing.active=i;render();await sleep(300);}
+      s.analyzed=true;s.fields=s.fields?.length?s.fields:createFields(s);s.evaluation=null;s.result=null;s.evaluatedAt=null;s.status=s.missingApproval?"증빙 보완":s.id==="EXP-24003"&&!s.fields.find(f=>f.id==="financeApprovalDate").verifiedByUser?"추가 검토 필요":"증빙 분석 완료";
+      addEvent(s,"증빙 분석 완료");processing={analysis:false,evaluation:false,steps:[],active:0};saveState();render();toast("증빙 분석이 완료되었습니다.");
+    }
+
+    // 7. Evidence validation
+    function evidenceValidation(fields,documentStatus){
+      if(!documentStatus.paymentVoucher)return {valid:false,reason:"REQUIRED_FIELD_UNCERTAIN"};
+      if(!documentStatus.approvalDocument)return {valid:false,reason:"REQUIRED_APPROVAL_DOCUMENT_MISSING"};
+      const uncertain=fields.find(f=>["EXTRACTION_UNCERTAIN","INVALID"].includes(f.status));if(uncertain)return {valid:false,reason:"REQUIRED_FIELD_UNCERTAIN"};
+      const conflict=fields.find(f=>f.status==="CONFLICT");if(conflict)return {valid:false,reason:"EVIDENCE_CONFLICT"};
+      const get=id=>fields.find(f=>f.id===id)?.value;
+      if(get("departmentHeadApprovalStatus")==="승인"&&!toDateOnly(get("departmentHeadApprovalDate")))return {valid:false,reason:"REQUIRED_FIELD_UNCERTAIN"};
+      if(get("financeApprovalStatus")==="승인"&&!toDateOnly(get("financeApprovalDate")))return {valid:false,reason:"REQUIRED_FIELD_UNCERTAIN"};
+      return {valid:true};
+    }
+
+    // 8. Deterministic control engine
+    function controlEngine({control,evidenceFields,documentStatus}){
+      const get=id=>evidenceFields.find(f=>f.id===id)?.value;
+      const amount=Number(get("expenseAmount")),pay=get("paymentDate"),dhStatus=get("departmentHeadApprovalStatus"),dhDate=get("departmentHeadApprovalDate"),finStatus=get("financeApprovalStatus"),finDate=get("financeApprovalDate");
+      const conditions=[],add=(id,label,status,description,fieldId)=>conditions.push({id,label,status,description,fieldId});
+      if(amount<control.threshold){add("applicability","적용 대상 여부","N/A",`지급금액 ${won(amount)}은 기준금액 ${won(control.threshold)} 미만입니다.`,"expenseAmount");return {result:"N/A",reasonCode:"BELOW_APPROVAL_THRESHOLD",summary:"지급금액이 통제 적용 기준인 10,000,000원 미만입니다.",conditions,relatedEvidence:["expenseAmount"]};}
+      add("applicability","적용 대상 여부","PASS",`지급금액 ${won(amount)}은 기준금액 ${won(control.threshold)} 이상입니다.`,"expenseAmount");
+      const val=evidenceValidation(evidenceFields,documentStatus);
+      if(!val.valid){add("evidence","필수 증빙 및 평가 항목", "REVIEW",val.reason==="REQUIRED_APPROVAL_DOCUMENT_MISSING"?"전자결재 승인 문서가 제출되지 않았습니다.":"필수 평가 항목의 원본 값을 확인해야 합니다.","financeApprovalDate");return {result:"REVIEW",reasonCode:val.reason,summary:"필수 증빙 또는 평가 항목을 확인할 수 없어 자동 평가를 완료하지 못했습니다.",conditions,relatedEvidence:["financeApprovalDate"]};}
+      if(dhStatus!=="승인"){add("dh-status","부서장 승인 여부","FAIL","부서장 승인 기록이 확인되지 않았습니다.","departmentHeadApprovalStatus");return {result:"FAIL",reasonCode:"DEPARTMENT_HEAD_APPROVAL_MISSING",summary:"부서장 승인이 확인되지 않았습니다.",conditions,relatedEvidence:["departmentHeadApprovalStatus"]};}
+      add("dh-status","부서장 승인 여부","PASS","부서장 승인이 확인되었습니다.","departmentHeadApprovalStatus");
+      if(finStatus!=="승인"){add("fin-status","재무담당 임원 승인 여부","FAIL","재무담당 임원 승인 기록이 확인되지 않았습니다.","financeApprovalStatus");return {result:"FAIL",reasonCode:"FINANCE_EXECUTIVE_APPROVAL_MISSING",summary:"재무담당 임원의 승인이 확인되지 않았습니다.",conditions,relatedEvidence:["financeApprovalStatus"]};}
+      add("fin-status","재무담당 임원 승인 여부","PASS","재무담당 임원 승인이 확인되었습니다.","financeApprovalStatus");
+      if(!dhDate||toDateOnly(dhDate)>=toDateOnly(pay)){add("dh-date","부서장 사전 승인 여부","FAIL",`승인일 ${dateDot(dhDate)}은 지급일 ${dateDot(pay)} 이전이 아닙니다.`,"departmentHeadApprovalDate");return {result:"FAIL",reasonCode:"DEPARTMENT_HEAD_APPROVAL_NOT_BEFORE_PAYMENT",summary:"부서장 승인이 지급 전에 완료되지 않았습니다.",conditions,relatedEvidence:["departmentHeadApprovalDate","paymentDate"]};}
+      add("dh-date","부서장 사전 승인 여부","PASS",`승인일 ${dateDot(dhDate)}은 지급일 ${dateDot(pay)} 이전입니다.`,"departmentHeadApprovalDate");
+      if(!finDate||toDateOnly(finDate)>=toDateOnly(pay)){add("fin-date","재무담당 임원 사전 승인 여부","FAIL",`승인일 ${dateDot(finDate)}은 지급일 ${dateDot(pay)} ${finDate&&toDateOnly(finDate)>toDateOnly(pay)?"이후":"이전이 아닙니다"}.`,"financeApprovalDate");return {result:"FAIL",reasonCode:"FINANCE_APPROVAL_NOT_BEFORE_PAYMENT",summary:"재무담당 임원의 승인이 지급일 이후에 완료되었습니다.",conditions,relatedEvidence:["financeApprovalDate","paymentDate"]};}
+      add("fin-date","재무담당 임원 사전 승인 여부","PASS",`승인일 ${dateDot(finDate)}은 지급일 ${dateDot(pay)} 이전입니다.`,"financeApprovalDate");
+      return {result:"PASS",reasonCode:"ALL_REQUIRED_APPROVALS_COMPLETED",summary:"부서장과 재무담당 임원의 승인이 모두 지급 전에 완료된 것으로 확인되었습니다.",conditions,relatedEvidence:["expenseAmount","paymentDate","departmentHeadApprovalDate","financeApprovalDate"]};
+    }
+    async function evaluateSample(){
+      if(processing.evaluation)return;const s=current();if(!s.analyzed){toast("증빙 분석이 필요합니다.","제출된 증빙을 먼저 분석해 주세요.");return;}
+      processing={analysis:false,evaluation:true,steps:["적용 대상 확인","증빙 적정성 확인","승인 여부 확인","승인 시점 대사","평가 결과 생성"],active:0};render();
+      for(let i=0;i<processing.steps.length;i++){processing.active=i;render();await sleep(190);}
+      s.evaluation=controlEngine({control:controlDefinition,evidenceFields:s.fields,documentStatus:{paymentVoucher:!s.missingVoucher,approvalDocument:!s.missingApproval}});s.result=s.evaluation.result;s.evaluatedAt=nowText();
+      s.status=s.result==="REVIEW"?"추가 검토 필요":s.result==="N/A"?"적용 제외":"운영평가 완료";if(!s.review)s.review=defaultReview(s.evaluation);
+      addEvent(s,"운영평가 실행",`결과: ${RESULT_TEXT[s.result]}`);processing={analysis:false,evaluation:false,steps:[],active:0};saveState();render();toast("운영평가가 완료되었습니다.",`판정 결과: ${RESULT_TEXT[s.result]}`);
+    }
+
+    // 9. Workpaper generation
+    function workpaperModal(){
+      const s=current(),ev=s.evaluation;
+      if(!s.analyzed||!ev){toast("조서 초안을 생성할 수 없습니다.","운영평가를 먼저 실행해 주세요.");return;}
+      const text=workpaperNarrative(s,ev);
+      setModal(`<div class="modal-layer" role="dialog" aria-modal="true" aria-labelledby="modalTitle"><div class="modal large"><div class="modal-head"><h2 id="modalTitle">운영평가 조서 미리보기</h2><button class="modal-close" data-action="close-modal" aria-label="닫기">×</button></div><div class="modal-body"><article class="workpaper"><h1>운영평가 조서</h1><dl class="wp-grid">
+        ${[["평가 차수",roundInfo.name],["프로세스",roundInfo.process],["통제코드",controlDefinition.id],["통제명",controlDefinition.name],["표본번호",s.id],["거래처",s.vendor],["지급금액",won(s.amount)],["평가 결과",RESULT_TEXT[ev.result]],["평가 내용",text],["근거 증빙",`1. 지급 전표 payment_voucher_${s.id}.pdf, 1페이지\n${s.missingApproval?"2. 전자결재 승인 문서 미제출":`2. 전자결재 승인 문서 approval_document_${s.id}.pdf, 1페이지`}`],["적용 기준","비용지급규정 제12조\n통제 AP-EXP-001 v3.2"],["평가자","내부통제팀 김민지"],["평가일시",s.finalizedAt||s.evaluatedAt||nowText()]].map(x=>`<dt>${x[0]}</dt><dd class="wp-text">${e(x[1])}</dd>`).join("")}
+      </dl></article></div><div class="modal-foot"><button class="btn" data-action="close-modal">닫기</button><button class="btn" data-action="print">인쇄</button><button class="btn primary" data-action="export-word">Word로 내보내기</button></div></div></div>`);addEvent(s,"조서 초안 생성");toast("조서 초안이 생성되었습니다.");
+    }
+
+    // 10. Event handlers
+    document.addEventListener("click",async ev=>{
+      const menu=ev.target.closest("[data-menu]")?.dataset.menu;if(menu){state.activeMenu=menu;saveState();render();return;}
+      const sample=ev.target.closest("[data-sample]")?.dataset.sample;if(sample){state.selectedId=sample;state.previewTab="PAYMENT_VOUCHER";state.highlight=null;saveState();render();return;}
+      const filter=ev.target.closest("[data-filter]")?.dataset.filter;if(filter){state.filter=filter;render();return;}
+      const tab=ev.target.closest("[data-tab]")?.dataset.tab;if(tab){state.previewTab=tab;state.highlight=null;render();return;}
+      const field=ev.target.closest("[data-field]")?.dataset.field;if(field&&!ev.target.closest("[data-action='verify-field']")){focusEvidence(field);return;}
+      const condition=ev.target.closest("[data-condition]");if(condition){const c=current().evaluation?.conditions.find(x=>x.id===condition.dataset.condition);if(c?.fieldId)focusEvidence(c.fieldId);return;}
+      const action=ev.target.closest("[data-action]")?.dataset.action;if(!action)return;
+      try{
+        if(action==="show-control")showControlModal();
+        if(action==="close-modal")closeModal();
+        if(action==="export-list")exportSampleList();
+        if(action==="add-evidence")document.querySelector("#fileInput").click();
+        if(action==="open-original"){state.previewTab=current().missingApproval?"PAYMENT_VOUCHER":state.previewTab;document.querySelector(".paper")?.scrollIntoView({behavior:"smooth",block:"center"});}
+        if(action==="analyze")await analyzeEvidence();
+        if(action==="evaluate")await evaluateSample();
+        if(action==="toggle-field-ids"){state.showFieldIds=!state.showFieldIds;render();}
+        if(action==="verify-field")showVerifyModal();
+        if(action==="apply-verification")applyVerification();
+        if(action==="request-evidence")showEvidenceRequestModal();
+        if(action==="confirm-evidence-request")confirmEvidenceRequest();
+        if(action==="save-review")saveReview();
+        if(action==="request-review")showReviewRequestModal();
+        if(action==="confirm-review-request")confirmReviewRequest();
+        if(action==="finalize")showFinalizeModal();
+        if(action==="confirm-finalize")finalizeEvaluation();
+        if(action==="reopen")showReopenModal();
+        if(action==="confirm-reopen")confirmReopen();
+        if(action==="workpaper")workpaperModal();
+        if(action==="print")window.print();
+        if(action==="export-word")toast("조서 초안이 내보내기 대기 목록에 등록되었습니다.");
+        if(action==="show-detail")showDetailModal();
+        if(action==="reset-data")showResetModal();
+        if(action==="confirm-reset"){localStorage.removeItem(STORAGE_KEY);state=initialState();normalizeState();closeModal();render();toast("평가 데이터가 초기 상태로 복원되었습니다.");}
+        if(action==="logout")toast("로그아웃은 보안 정책에 따라 별도 인증 화면에서 처리됩니다.");
+      }catch(err){toast("요청을 처리하지 못했습니다.","화면을 유지한 상태에서 다시 시도해 주세요.");}
+    });
+    document.addEventListener("input",ev=>{if(ev.target.id==="search"){state.search=ev.target.value;const pos=ev.target.selectionStart;render();const input=document.querySelector("#search");input.focus();input.setSelectionRange(pos,pos);}});
+    document.addEventListener("change",ev=>{
+      if(ev.target.id==="fileInput"){const s=current();s.tempFiles.push(...[...ev.target.files].map(f=>f.name));saveState();render();toast("선택한 파일이 임시 증빙에 추가되었습니다.","파일은 외부로 전송되지 않습니다.");}
+    });
+    document.addEventListener("keydown",ev=>{if(ev.key==="Escape"&&document.querySelector(".modal-layer"))closeModal();if((ev.key==="Enter"||ev.key===" ")&&ev.target.matches(".sample"))ev.target.click();});
+    function focusEvidence(fieldId){
+      const f=current().fields.find(x=>x.id===fieldId);if(!f?.source?.anchorId)return;state.previewTab=f.source.documentType;state.highlight=f.source.anchorId;render();setTimeout(()=>document.querySelector("#"+f.source.anchorId)?.scrollIntoView({behavior:"smooth",block:"center"}),50);
+    }
+    function showControlModal(){setModal(`<div class="modal-layer" role="dialog" aria-modal="true" aria-labelledby="modalTitle"><div class="modal"><div class="modal-head"><h2 id="modalTitle">통제 기준</h2><button class="modal-close" data-action="close-modal" aria-label="닫기">×</button></div><div class="modal-body"><div class="modal-section"><h3>통제 목적</h3><p>고액 비용 지급에 대한 적절한 사전 승인을 확보하여<br>무단 또는 부적절한 비용 집행 위험을 방지한다.</p></div><div class="modal-section"><h3>적용 조건</h3><p>지급금액이 10,000,000원 이상인 거래</p></div><div class="modal-section"><h3>필수 조건</h3><ol class="rule-list"><li>부서장 승인이 존재해야 한다.</li><li>재무담당 임원 승인이 존재해야 한다.</li><li>두 승인 모두 지급일 전에 완료되어야 한다.</li></ol></div><div class="modal-section"><h3>인정 증빙</h3><p>지급 전표 · 전자결재 승인 문서</p></div><div class="modal-section"><h3>규칙 버전 / 적용 기간</h3><p>AP-EXP-001 v3.2 · 2026.01.01부터</p></div></div><div class="modal-foot"><button class="btn primary" data-action="close-modal">확인</button></div></div></div>`);}
+    function showVerifyModal(){const s=current();if(s.id!=="EXP-24003"){toast("수동 확인 대상이 아닙니다.","확인 필요 상태의 필드에서 사용할 수 있습니다.");return;}setModal(`<div class="modal-layer" role="dialog" aria-modal="true" aria-labelledby="modalTitle"><div class="modal large"><div class="modal-head"><h2 id="modalTitle">재무담당 임원 승인일 확인</h2><button class="modal-close" data-action="close-modal" aria-label="닫기">×</button></div><div class="modal-body"><div class="zoom-doc"><div class="zoom-paper"><p>비용 지급 승인서 · 재무담당 임원 결재란</p><hr><p>재무담당 임원 승인 &nbsp; <b>승인</b></p><p>원문 표시: 승인일 <span class="zoom-value">2026.06.16</span></p></div></div><div class="form-grid" style="margin-top:16px"><div class="field"><label for="verifyDate">확인값</label><input id="verifyDate" type="date" value="2026-06-16"></div><div class="field"><label for="verifyReason">수정 사유</label><select id="verifyReason"><option>원본 문서 직접 확인</option><option>증빙 제출자 확인</option></select></div></div><p style="color:var(--gray-600);font-size:10px">이 확인값은 현재 표본에만 반영되며 다른 표본에는 자동 적용되지 않습니다.</p></div><div class="modal-foot"><button class="btn" data-action="close-modal">취소</button><button class="btn primary" data-action="apply-verification">확인값 반영</button></div></div></div>`);}
+    function applyVerification(){const s=current(),value=document.querySelector("#verifyDate").value,reason=document.querySelector("#verifyReason").value;if(!value)return;const f=s.fields.find(x=>x.id==="financeApprovalDate");f.value=value;f.status="EXTRACTED";f.verifiedByUser=true;f.source.text="승인일 "+value;s.finDate=value;s.status="증빙 분석 완료";s.evaluation=null;s.result=null;addEvent(s,"재무담당 임원 승인일 수정",`기존 값: 확인 불가 / 수정 값: ${dateDot(value)} / 수정 사유: ${reason} / 수정자: 내부통제팀 김민지`);saveState();closeModal();render();toast("확인값이 반영되었습니다.","담당자 확인 이력이 저장되었습니다.");}
+    function showEvidenceRequestModal(){const s=current();setModal(`<div class="modal-layer" role="dialog" aria-modal="true" aria-labelledby="modalTitle"><div class="modal"><div class="modal-head"><h2 id="modalTitle">증빙 보완 요청</h2><button class="modal-close" data-action="close-modal" aria-label="닫기">×</button></div><div class="modal-body"><div class="form-grid"><div class="field"><label for="requestTarget">요청 대상</label><input id="requestTarget" value="${e(s.department)} 비용 담당자"></div><div class="field"><label for="requestDue">보완 기한</label><input id="requestDue" type="date" value="${futureDateISO()}"></div><div class="field full"><label for="requestReason">요청 사유</label><textarea id="requestReason">고액 비용 사전 승인 통제 평가에 필요한 전자결재 승인 문서를 제출해 주세요.</textarea></div></div></div><div class="modal-foot"><button class="btn" data-action="close-modal">취소</button><button class="btn primary" data-action="confirm-evidence-request">보완 요청 등록</button></div></div></div>`);}
+    function confirmEvidenceRequest(){const s=current(),target=document.querySelector("#requestTarget").value.trim(),due=document.querySelector("#requestDue").value,reason=document.querySelector("#requestReason").value.trim();if(!target||!due||!reason){toast("필수 항목을 입력해 주세요.","요청 대상, 보완 기한 및 요청 사유가 필요합니다.");return;}s.requestInfo={type:"증빙 보완",target,due,reason,requestedAt:nowText(),requester:"내부통제팀 김민지"};s.status="증빙 보완";addEvent(s,"증빙 보완 요청",`요청 대상: ${target} / 보완 기한: ${dateDot(due)} / 요청 사유: ${reason}`);saveState();closeModal();render();toast("증빙 보완 요청이 등록되었습니다.",`${target} · ${dateDot(due)}까지`);}
+    function showReviewRequestModal(){const s=current();captureReview();setModal(`<div class="modal-layer" role="dialog" aria-modal="true" aria-labelledby="modalTitle"><div class="modal"><div class="modal-head"><h2 id="modalTitle">재검토 요청</h2><button class="modal-close" data-action="close-modal" aria-label="닫기">×</button></div><div class="modal-body"><div class="form-grid"><div class="field"><label for="reviewer">재검토자</label><select id="reviewer"><option>통제 책임자 박준호</option><option>내부통제팀 이서연</option></select></div><div class="field full"><label for="reviewRequestNote">요청 의견</label><textarea id="reviewRequestNote">판정 근거 및 후속조치의 적정성을 재검토해 주세요.</textarea></div></div></div><div class="modal-foot"><button class="btn" data-action="close-modal">취소</button><button class="btn primary" data-action="confirm-review-request">재검토 요청 등록</button></div></div></div>`);}
+    function confirmReviewRequest(){const s=current(),reviewer=document.querySelector("#reviewer").value,note=document.querySelector("#reviewRequestNote").value.trim();if(!note){toast("요청 의견을 입력해 주세요.");return;}s.requestInfo={type:"재검토",target:reviewer,reason:note,requestedAt:nowText(),requester:"내부통제팀 김민지"};s.status="재검토 요청";addEvent(s,"재검토 요청",`재검토자: ${reviewer} / 요청 의견: ${note}`);saveState();closeModal();render();toast("재검토 요청이 등록되었습니다.",reviewer);}
+    function showReopenModal(){setModal(`<div class="modal-layer" role="dialog" aria-modal="true" aria-labelledby="modalTitle"><div class="modal"><div class="modal-head"><h2 id="modalTitle">평가 재개</h2><button class="modal-close" data-action="close-modal" aria-label="닫기">×</button></div><div class="modal-body"><p>확정된 평가를 다시 편집 가능한 상태로 전환합니다. 기존 확정 결과와 변경 이력은 보존됩니다.</p><div class="field" style="margin-top:14px"><label for="reopenReason">재개 사유</label><textarea id="reopenReason" placeholder="재개 사유를 구체적으로 입력해 주세요."></textarea></div></div><div class="modal-foot"><button class="btn" data-action="close-modal">취소</button><button class="btn danger" data-action="confirm-reopen">평가 재개</button></div></div></div>`);}
+    function confirmReopen(){const s=current(),reason=document.querySelector("#reopenReason").value.trim();if(!reason){toast("재개 사유를 입력해 주세요.");return;}s.reopenHistory=s.reopenHistory||[];s.reopenHistory.push({reason,reopenedAt:nowText(),reopenedBy:"내부통제팀 김민지",previousResult:s.result,previousFinalizedAt:s.finalizedAt});s.finalized=false;s.status="담당자 검토 중";addEvent(s,"평가 재개",`재개 사유: ${reason} / 재개자: 내부통제팀 김민지`);saveState();closeModal();render();toast("평가가 다시 편집 가능한 상태로 전환되었습니다.");}
+    function captureReview(){const s=current();s.review=document.querySelector("#review")?.value.trim()||s.review||"";s.followUp=document.querySelector("#followUp")?.value||s.followUp;s.importance=document.querySelector("#importance")?.value||s.importance;}
+    function saveReview(showToast=true){const s=current();captureReview();s.status=s.status==="운영평가 완료"?"담당자 검토 중":s.status;addEvent(s,"평가자 의견 저장");saveState();render();if(showToast)toast("평가 결과가 임시 저장되었습니다.");}
+    function showFinalizeModal(){const s=current();captureReview();if(!s.evaluation||s.evaluation.result==="REVIEW"){toast("평가 결과를 확정할 수 없습니다.","추가 검토 또는 증빙 보완 사항을 먼저 해소해 주세요.");return;}if(!s.review){toast("평가자 의견을 입력해 주세요.","의견 입력 후 평가를 완료할 수 있습니다.");return;}if(s.evaluation.result==="FAIL"&&s.followUp==="후속조치 없음"){toast("후속조치를 선택해 주세요.","통제 미충족 건은 후속조치 지정 후 확정할 수 있습니다.");return;}setModal(`<div class="modal-layer" role="dialog" aria-modal="true" aria-labelledby="modalTitle"><div class="modal"><div class="modal-head"><h2 id="modalTitle">평가 결과 확정</h2><button class="modal-close" data-action="close-modal" aria-label="닫기">×</button></div><div class="modal-body"><h3>평가 결과를 확정하시겠습니까?</h3><div class="paper-grid" style="margin-top:16px"><dt>표본번호</dt><dd>${s.id}</dd><dt>평가 결과</dt><dd>${RESULT_TEXT[s.evaluation.result]}</dd><dt>후속조치</dt><dd>${e(s.followUp)}</dd></div><p style="margin-top:16px;color:var(--gray-600)">확정된 결과는 조서에 반영됩니다.</p></div><div class="modal-foot"><button class="btn" data-action="close-modal">취소</button><button class="btn primary" data-action="confirm-finalize">평가 결과 확정</button></div></div></div>`);}
+    function finalizeEvaluation(){const s=current();s.finalized=true;s.status=s.result==="N/A"?"적용 제외":"평가 완료";s.finalizedBy="내부통제팀 김민지";s.finalizedAt=nowText();addEvent(s,"평가 결과 확정",`평가자: ${s.finalizedBy}`);saveState();closeModal();render();toast("평가 결과가 확정되었습니다.");}
+    function showDetailModal(){const s=current(),ev=s.evaluation;if(!ev){toast("상세 판정 근거가 없습니다.","운영평가를 먼저 실행해 주세요.");return;}setModal(`<div class="modal-layer" role="dialog" aria-modal="true" aria-labelledby="modalTitle"><div class="modal large"><div class="modal-head"><h2 id="modalTitle">상세 판정 근거</h2><button class="modal-close" data-action="close-modal" aria-label="닫기">×</button></div><div class="modal-body"><div class="table-wrap"><table class="field-table"><thead><tr><th>조건</th><th>입력값 / 설명</th><th>결과</th><th>사용 필드</th><th>문서 출처</th></tr></thead><tbody>${ev.conditions.map(c=>{const f=s.fields.find(x=>x.id===c.fieldId);return `<tr><td>${c.label}</td><td>${e(c.description)}</td><td>${conditionBadge(c.status)}</td><td>${e(f?.internalId||"-")}</td><td>${e(f?.source.fileName||"-")}</td></tr>`}).join("")}</tbody></table></div><div class="run-grid" style="margin-top:16px"><div class="kv"><span>사유코드</span><b>${ev.reasonCode}</b></div><div class="kv"><span>통제 기준</span><b>AP-EXP-001 v3.2</b></div><div class="kv"><span>문서 분석</span><b>Document AI v2.1</b></div><div class="kv"><span>판정 엔진</span><b>Control Engine v1.0</b></div></div><details><summary>구조화 데이터 보기</summary><pre style="white-space:pre-wrap;background:var(--gray-50);padding:12px">${e(JSON.stringify(ev,null,2))}</pre></details></div><div class="modal-foot"><button class="btn primary" data-action="close-modal">닫기</button></div></div></div>`);}
+    function showResetModal(){setModal(`<div class="modal-layer" role="dialog" aria-modal="true" aria-labelledby="modalTitle"><div class="modal"><div class="modal-head"><h2 id="modalTitle">평가 데이터 초기화</h2><button class="modal-close" data-action="close-modal" aria-label="닫기">×</button></div><div class="modal-body"><h3>저장된 평가 데이터를 초기 상태로 복원하시겠습니까?</h3><p>분석 결과, 담당자 의견, 확정 상태 및 실행 이력이 삭제됩니다.</p></div><div class="modal-foot"><button class="btn" data-action="close-modal">취소</button><button class="btn danger" data-action="confirm-reset">평가 데이터 초기화</button></div></div></div>`);}
+    function exportSampleList(){const rows=[["표본번호","거래처","담당부서","지급금액","상태","평가결과"],...Object.values(state.samples).map(s=>[s.id,s.vendor,s.department,s.amount,s.status,RESULT_TEXT[s.evaluation?.result||s.result]||"미실행"])];const blob=new Blob(["\ufeff"+rows.map(r=>r.map(v=>`"${String(v).replaceAll('"','""')}"`).join(",")).join("\r\n")],{type:"text/csv;charset=utf-8"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="2026_Q2_운영평가_표본목록.csv";a.click();URL.revokeObjectURL(a.href);toast("표본 목록을 내보냈습니다.");}
+
+    // 11. Persistence
+    function saveState(){try{localStorage.setItem(STORAGE_KEY,JSON.stringify(state));}catch(_){toast("저장 공간을 사용할 수 없습니다.","현재 화면에서는 계속 업무를 진행할 수 있습니다.");}}
+    function loadState(){try{const data=JSON.parse(localStorage.getItem(STORAGE_KEY));return data?.samples&&data?.selectedId?data:null;}catch(_){return null;}}
+    function normalizeState(){
+      const seededTimes={"EXP-24001":"2026.07.08 10:15:00","EXP-24003":"2026.07.08 11:31:00","EXP-24004":"2026.07.08 13:05:00","EXP-24005":"2026.07.08 14:10:00"};
+      Object.values(state.samples).forEach(s=>{
+        s.events=Array.isArray(s.events)?s.events:[];s.tempFiles=Array.isArray(s.tempFiles)?s.tempFiles:[];s.reopenHistory=Array.isArray(s.reopenHistory)?s.reopenHistory:[];
+        s.fields=(s.fields?.length?s.fields:createFields(s)).map(f=>{
+          if(["REQUIRED_DOCUMENT_MISSING","EVIDENCE_ABSENT","NOT_APPLICABLE"].includes(f.status)){f.source={...f.source,fileName:null,page:null,anchorId:null};}
+          return f;
+        });
+        if(s.result&&s.analyzed&&!s.evaluation){
+          s.evaluation=controlEngine({control:controlDefinition,evidenceFields:s.fields,documentStatus:{paymentVoucher:!s.missingVoucher,approvalDocument:!s.missingApproval}});
+          s.result=s.evaluation.result;s.evaluatedAt=s.evaluatedAt||seededTimes[s.id]||nowText();
+          if(!s.events.some(x=>x.title==="운영평가 실행"))s.events.push({time:s.evaluatedAt,title:"운영평가 실행",detail:`결과: ${RESULT_TEXT[s.result]}`});
+        }
+      });
+      saveState();
+    }
+
+    // 12. Application initialization
+    normalizeState();
+    const App={get state(){return state;},init:render,render,selectSample:id=>{state.selectedId=id;render();},analyzeEvidence,evaluateSample,saveReview,finalizeEvaluation};
+    window.ControlEvaluationApp=App;
+    render();
+  })();
+  </script>
+</body>
+</html>
